@@ -1,69 +1,96 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   so_long.c                                          :+:      :+:    :+:   */
+/*   test3.c                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: czheng-c <czheng-c@student.42kl.edu.my>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2023/08/15 11:02:16 by czheng-c          #+#    #+#             */
-/*   Updated: 2023/08/15 11:43:14 by czheng-c         ###   ########.fr       */
+/*   Created: 2023/11/10 13:15:20 by czheng-c          #+#    #+#             */
+/*   Updated: 2023/11/13 11:42:31 by czheng-c         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-//#include "so_long.h"
-#include "mlx.h"
-#include <stdlib.h>
-#include <unistd.h>
-#include <stdio.h>
+#include "so_long.h"
 
-// void	ft_putchar(char c)
-// {
-// 	write(1, &c, 1);
-// }
-
-// int deal_key(int key, void *param)
-// {
-// 	ft_putchar('X');
-// 	mlx_pixel_put(mlx_ptr, win_ptr, );
-// 	return (0);
-// }
-
-int key_press(int keycode, void *param)
+int	close_window(void *param)
 {
-	printf("Key pressed: %d\n", keycode);
-	return 0;
+	t_md	*smd;
+
+	smd = (t_md *)param;
+	mlx_destroy_window(smd->mlx_ptr, smd->win_ptr);
+	exit(0);
 }
 
-int mouse_click(int button, int x, int y, void *param)
+int	handle_key_press(int keycode, void *param)
 {
-	printf("Mouse click: Button %d at position (%d, %d)\n", button, x, y);
-	return 0;
+	t_md	*smd;
+
+	smd = (t_md *)param;
+	if (smd->map_data[smd->ppos.y / 50][smd->ppos.x / 50] == 'E'
+	|| smd->map_data[smd->ppos.y / 50][smd->ppos.x / 50] == 'V')
+	{
+		if (keycode == 36)
+			exit(0);
+		else
+			return (0);
+	}
+	mlx_put_image_to_window(smd->mlx_ptr, smd->win_ptr, \
+			smd->smap.floor, smd->ppos.x, smd->ppos.y);
+	check_keycode(keycode, smd);
+	pod(smd->mlx_ptr, smd->win_ptr, smd);
+	return (0);
 }
 
-int	main()
+void	display_current_frame(void *mlx_ptr, void *win_ptr, t_md *smd, int cf)
 {
-	void	*mlx_ptr;
-	void	*win_ptr;
+	int			i;
 
-	mlx_ptr = mlx_init();
-	win_ptr = mlx_new_window(mlx_ptr, 500, 500, "My first window!");
-	
-	//handle key press
-	//mlx_hook(win_ptr, 2, 1L << 0, &key_press, NULL);
+	i = -1;
+	while (++i < smd->coin)
+	{
+		if (smd->map_data[smd->money[i].y / 50][smd->money[i].x / 50] == 'C')
+		{
+			mlx_put_image_to_window(mlx_ptr, win_ptr, smd->smap.floor, \
+					smd->money[i].x, smd->money[i].y);
+			mlx_put_image_to_window(mlx_ptr, win_ptr, smd->smap.coin[cf], \
+					smd->money[i].x, smd->money[i].y);
+		}
+	}
+}
 
-	//output string
-	//mlx_string_put(mlx_ptr, win_ptr, 200, 50, 0xFFFFFF, "Hello World");
+int	animation_function(void *param)
+{
+	static int		cf;
+	t_md			*smd;
 
-	//handle mouse
-	//mlx_hook(win_ptr, 4, 1L << 2, &mouse_click, NULL);
+	smd = (t_md *)param;
+	if (smd->map_data[smd->ppos.y / 50][smd->ppos.x / 50] != 'V')
+	{
+		display_current_frame(smd->mlx_ptr, smd->win_ptr, smd, cf);
+		cf = (cf + 1) % 9;
+	}
+	return (0);
+}
 
-	//put dot
-	//mlx_pixel_put(mlx_ptr, win_ptr, 100, 100, 0xFF0000);
-	// mlx_pixel_put(mlx_ptr, win_ptr, 250, 250, 0xFFFFFF);
-	// mlx_key_hook(win_ptr, deal_key, (void *)0);
-	mlx_loop(mlx_ptr);
-	//printf("hello");
-	mlx_destroy_window(mlx_ptr, win_ptr);
-	free(mlx_ptr);
-	free(win_ptr);
+int	main(int ac, char **av)
+{
+	t_md	smd;
+
+	if (ac < 2)
+		print_n_exit("Need to input map");
+	else if (ac > 2)
+		print_n_exit("Only one map input needed");
+	check_error(av, &smd);
+	smd.mlx_ptr = mlx_init();
+	smd.win_ptr = mlx_new_window(smd.mlx_ptr, smd.width * 50, \
+	smd.height * 50, "Move Pixel Example");
+	if (!smd.mlx_ptr || !smd.win_ptr)
+		exit(0);
+	mapping(&smd);
+	draw_map(&smd, smd.smap);
+	mlx_loop_hook(smd.mlx_ptr, &animation_function, &smd);
+	mlx_hook(smd.win_ptr, 2, 1L << 0, &handle_key_press, &smd);
+	mlx_hook(smd.win_ptr, 17, 0, close_window, &smd);
+	mlx_loop(smd.mlx_ptr);
+	return (0);
 }

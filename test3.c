@@ -1,129 +1,97 @@
-#include "mlx.h"
-#include <stdio.h>
-#include <stddef.h>
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   test3.c                                            :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: czheng-c <czheng-c@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2023/11/10 13:15:20 by czheng-c          #+#    #+#             */
+/*   Updated: 2023/11/10 14:33:41 by czheng-c         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
 
-#define MAP_WIDTH  10
-#define MAP_HEIGHT 10
-#define CELL_SIZE  50
+#include "so_long.h"
 
-// Example map data (using characters for simplicity)
-char map_data[MAP_HEIGHT][MAP_WIDTH] = {
-    "##########",
-    "#........#",
-    "#..##....#",
-    "#..##....#",
-    "#........#",
-    "#........#",
-    "#........#",
-    "#........#",
-    "#........#",
-    "##########"
-};
+int	close_window(void *param)
+{
+	t_md	*smd;
 
-// Structure to represent the position of the pixel
-typedef struct {
-    int x;
-    int y;
-} Pixel;
-
-// Initial position of the pixel
-Pixel pixel = {100, 100};
-
-void draw_map(void *mlx_ptr, void *win_ptr) {
-    int x, y;
-
-    // Loop through each cell of the map
-    for (y = 0; y < MAP_HEIGHT; y++) {
-        for (x = 0; x < MAP_WIDTH; x++) {
-            // Calculate the position to draw the cell
-            int draw_x = x * CELL_SIZE;
-            int draw_y = y * CELL_SIZE;
-
-            // Draw a rectangle for each cell based on map data
-            if (map_data[y][x] == '#') {
-                mlx_string_put(mlx_ptr, win_ptr, draw_x, draw_y, 0xFF0000, "#");  // Draw a red rectangle for walls
-            } else if (map_data[y][x] == '.' && map_data[y][x] == 'T') {
-                mlx_string_put(mlx_ptr, win_ptr, draw_x, draw_y, 0xFFFFFF, ".");  // Draw a white rectangle for open space
-            }
-            // Add more conditions for other elements in your map
-        }
-    }
+	smd = (t_md *)param;
+	mlx_destroy_window(smd->mlx_ptr, smd->win_ptr);
+	exit(0);
 }
 
-// Function to draw a white pixel at a given position
-void draw_pixel(void *mlx_ptr, void *win_ptr, int x, int y) {
-    for (int i = 0; i < 50; i++)
-    for (int j = 0; j < 50; j++)
-    mlx_pixel_put(mlx_ptr, win_ptr, x + i, y + j, 0xFFFFFF); // Draw a white pixel
+int	handle_key_press(int keycode, void *param)
+{
+	t_md	*smd;
+
+	smd = (t_md *)param;
+	if (smd->map_data[smd->ppos.y / 50][smd->ppos.x / 50] == 'E'
+	|| smd->map_data[smd->ppos.y / 50][smd->ppos.x / 50] == 'V')
+	{
+		if (keycode == 36)
+			exit(0);
+		else
+			return (0);
+	}
+	mlx_put_image_to_window(smd->mlx_ptr, smd->win_ptr, \
+			smd->smap.floor, smd->ppos.x, smd->ppos.y);
+	check_keycode(keycode, smd);
+	pod(smd->mlx_ptr, smd->win_ptr, smd);
+	return (0);
 }
 
-void erase_pixel(void *mlx_ptr, void *win_ptr, int x, int y) {
-    for (int i = 0; i < 50; i++)
-    for (int j = 0; j < 50; j++)
-    mlx_pixel_put(mlx_ptr, win_ptr, x + i, y + j, 0x000000); // Draw a black pixel to "erase" the previous position
+void	display_current_frame(void *mlx_ptr, void *win_ptr, t_md *smd, int cf)
+{
+	int			i;
+	static int	count;
+
+	i = -1;
+	while (++i < smd->coin)
+	{
+		if (smd->map_data[smd->money[i].y / 50][smd->money[i].x / 50] == 'C')
+		{
+			mlx_put_image_to_window(mlx_ptr, win_ptr, smd->smap.floor, \
+					smd->money[i].x, smd->money[i].y);
+			mlx_put_image_to_window(mlx_ptr, win_ptr, smd->smap.coin[cf], \
+					smd->money[i].x, smd->money[i].y);
+		}
+	}
 }
 
-void *load_texture(void *mlx_ptr, char *filename, int *width, int *height) {
-    return mlx_xpm_file_to_image(mlx_ptr, filename, width, height);
+int	animation_function(void *param)
+{
+	static int		cf;
+	t_md			*smd;
+
+	smd = (t_md *)param;
+	if (smd->map_data[smd->ppos.y / 50][smd->ppos.x / 50] != 'V')
+	{
+		display_current_frame(smd->mlx_ptr, smd->win_ptr, smd, cf);
+		cf = (cf + 1) % 9;
+	}
+	return (0);
 }
 
-void draw_texture(void *mlx_ptr, void *win_ptr, void *texture_img, int x, int y) {
-    mlx_put_image_to_window(mlx_ptr, win_ptr, texture_img, x, y);
-}
-void erase_texture(void *mlx_ptr, void *win_ptr, void *texture_img, int x, int y) {
-    mlx_put_image_to_window(mlx_ptr, win_ptr, texture_img, x, y);
-}
+int	main(int ac, char **av)
+{
+	t_md	smd;
 
-// Key press event handler to move the pixel
-int handle_key_press(int keycode, void *param) {
-    // Update pixel position based on the pressed key
-
-   erase_pixel(param, param, pixel.x, pixel.y);
-    erase_texture(param, param, param, pixel.x, pixel.y);
-    switch (keycode) {
-        case 13: // Up Arrow
-            pixel.y -= 1 * CELL_SIZE;
-            printf("A\n");
-            break;
-        case 1: // Down Arrow
-            pixel.y += 1 * CELL_SIZE;
-            break;
-        case 0: // Left Arrow
-            pixel.x -= 1 * CELL_SIZE;
-            break;
-        case 2: // Right Arrow
-            pixel.x += 1 * CELL_SIZE;
-            break;
-    }
-
-    // Draw the updated pixel
-   draw_pixel(param, param, pixel.x, pixel.y);
-    draw_texture(param, param, param, pixel.x, pixel.y);
-    return 0;
-}
-
-int main(void) {
-    void *mlx_ptr;
-    void *win_ptr;
- void *texture_img;
-    int width, height;
-    // Initialize MiniLibX
-    mlx_ptr = mlx_init();
-
-    // Create a new window
-    win_ptr = mlx_new_window(mlx_ptr, 500, 500, "Move Pixel Example");
-    draw_map(mlx_ptr, win_ptr);
-    texture_img = load_texture(mlx_ptr, "texture.xpm", 0, 0);
-
-    draw_texture(mlx_ptr, win_ptr, texture_img, 100, 100);
-    // Draw the initial pixel
-    draw_pixel(mlx_ptr, win_ptr, pixel.x, pixel.y);
-
-    // Register the key press event handler
-    mlx_hook(win_ptr, 2, 1L << 0, &handle_key_press, win_ptr);
-
-    // Start the event loop
-    mlx_loop(mlx_ptr);
-
-    return 0;
+	if (ac < 2)
+		print_n_exit("Need to input map");
+	else if (ac > 2)
+		print_n_exit("Only one map input needed");
+	checkError(ac, av, &smd);
+	smd.mlx_ptr = mlx_init();
+	smd.win_ptr = mlx_new_window(smd.mlx_ptr, smd.width * 50, \
+	smd.height * 50, "Move Pixel Example");
+	if (!smd.mlx_ptr || !smd.win_ptr)
+		exit(0);
+	mapping(&smd);
+	draw_map(smd.mlx_ptr, smd.win_ptr, smd, smd.smap);
+	mlx_loop_hook(smd.mlx_ptr, &animation_function, &smd);
+	mlx_hook(smd.win_ptr, 2, 1L << 0, &handle_key_press, &smd);
+	mlx_hook(smd.win_ptr, 17, 0, close_window, &smd);
+	mlx_loop(smd.mlx_ptr);
+	return (0);
 }
